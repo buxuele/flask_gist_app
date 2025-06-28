@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 标题是动态的，对SEO友好 -->
+    <title>{{ gist.filename }} - 我的知识库</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <!-- 我们可以复用主页的 CSS，因为它已经很完美了 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* 为详情页添加一些微调，使其更专注 */
+        body {
+            padding-top: 56px; /* 为固定的导航栏留出空间 */
+        }
+        .navbar {
+            border-bottom: 1px solid #444 !important;
+        }
+        main.container {
+            max-width: 1200px; /* 限制最大宽度，阅读更舒适 */
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand navbar-dark bg-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-arrow-left-circle"></i> 返回主页
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="navbar-text me-3" title="{{ gist.description }}">
+                    <strong>{{ gist.filename }}</strong>
+                </span>
+                <button class="btn btn-outline-success btn-copy-full" title="复制完整代码">
+                    <i class="bi bi-clipboard"></i> 复制
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mt-4">
+        <!-- 直接在这里构建卡片结构 -->
+        <div class="card">
+             <div class="card-body" id="code-body">
+                <!-- 代码块将由下面的 JS 动态渲染进来 -->
+             </div>
+        </div>
+    </main>
+
+    <!-- 把完整代码存在一个看不见的地方，方便JS读取 -->
+    <textarea id="full-code" style="display:none;">{{ gist.content }}</textarea>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        // 详情页的 JS 逻辑很简单，可以直接内联在这里
+        document.addEventListener('DOMContentLoaded', () => {
+            const content = document.getElementById('full-code').value;
+            const filename = "{{ gist.filename }}";
+            const codeBody = document.getElementById('code-body');
+            const copyBtn = document.querySelector('.btn-copy-full');
+            
+            // 这是一个精简版的渲染函数，只为本页服务
+            function renderFullCodeBlock(fullContent, filename) {
+                const cleanContent = fullContent.trim();
+                const lineCount = cleanContent.split('\n').length;
+                let lineNumbersHtml = '';
+                for (let i = 1; i <= lineCount; i++) {
+                    lineNumbersHtml += i + '\n';
+                }
+
+                let language = (filename.split('.').pop() || 'plaintext').toLowerCase();
+                if (!hljs.getLanguage(language)) {
+                    language = 'plaintext';
+                }
+                const highlightedCode = hljs.highlight(cleanContent, { language: language, ignoreIllegals: true }).value;
+
+                return `
+                    <div class="code-container">
+                        <pre class="line-numbers">${lineNumbersHtml}</pre>
+                        <pre><code>${highlightedCode}</code></pre>
+                    </div>
+                `;
+            }
+
+            // 渲染完整代码
+            codeBody.innerHTML = renderFullCodeBlock(content, filename);
+
+            // 复制按钮逻辑
+            copyBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(content).then(() => {
+                    const originalText = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '<i class="bi bi-check-lg"></i> 已复制!';
+                    copyBtn.classList.remove('btn-outline-success');
+                    copyBtn.classList.add('btn-success');
+                    setTimeout(() => {
+                        copyBtn.innerHTML = originalText;
+                        copyBtn.classList.add('btn-outline-success');
+                        copyBtn.classList.remove('btn-success');
+                    }, 2000);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
